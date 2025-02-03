@@ -310,7 +310,4 @@ function Code2HtmlSample() {
 
     const code = 'if (myVar == 1) return true; else return false;';
     const html = Code2Html.create(options).convert(code);
-
-    document.getElementById('code-to-html-html').value = html;
-    document.getElementById('code-to-html-preview').innerHTML = html;
 }
