@@ -10,6 +10,7 @@ if (!window.Code2Html) {
             let _methodCss = 'method';
             let _stringCss = 'string';
             let _stringEscCss = 'escape';
+            let _commentCss = 'comment';
             let _normalCss = 'normal';
             let _specialCharCss = 'special-char';
             let _lineCss = 'line';
@@ -65,6 +66,7 @@ if (!window.Code2Html) {
                 }
 
                 let prevLexeme = '';
+                let blockComment = false;
                 for (let l = contentStartLine; l <= contentEndLine; l++) {
                     const line = lines[l];
 
@@ -75,6 +77,7 @@ if (!window.Code2Html) {
                     let lineContentStarted = false;
                     let stringLiteralQuote = '';
                     let stringLiteral = false;
+                    let lineComment = false;
                     let escape = false;
                     let lexeme = '';
                     for (let i = 0; i < line.length; i++) {
@@ -94,7 +97,45 @@ if (!window.Code2Html) {
                             }
                             else {
                                 lineContentStarted = true;
+                                if (blockComment) {
+                                    resultLine += '<span class="' + _commentCss + '">';
+                                }
                             }
+                        }
+
+                        if ((!stringLiteral) && (!lineComment) && (!blockComment) && (ch === '/') && (i < line.length - 1)) {
+                            const nextCh = line[i + 1];
+                            if (nextCh == '/') {
+                                lineComment = true;
+                                resultLine += '<span class="' + _commentCss + '">';
+                                resultLine += '<span class="' + _specialCharCss + '">' + ch + nextCh + '</span>';
+                                i++;
+                                continue;
+                            }
+                            else if (nextCh == '*') {
+                                blockComment = true;
+                                resultLine += '<span class="' + _commentCss + '">';
+                                resultLine += '<span class="' + _specialCharCss + '">' + ch + nextCh + '</span>';
+                                i++;
+                                continue;
+                            }
+                        }
+
+                        if (lineComment || blockComment) {
+                            if ((blockComment) && (ch === '*') && (i < line.length - 1)) {
+                                const nextCh = line[i + 1];
+                                if (nextCh == '/') {
+                                    blockComment = false;
+
+                                    resultLine += '<span class="' + _specialCharCss + '">' + ch + nextCh + '</span>';
+                                    resultLine += '</span>';
+                                    i++;
+                                    continue;
+                                }
+                            }
+
+                            resultLine += ch;
+                            continue;
                         }
 
                         let escSet = false;
@@ -140,7 +181,7 @@ if (!window.Code2Html) {
                                     resultLine += '<span class="' + _specialCharCss + '">' + ch + '</span>';
                                 }
 
-                                if (lexemeType == 'declaration' || lexemeType == 'statement' || lexemeType == 'class' || lexemeType == 'method') {
+                                if (lexemeType) {
                                     prevLexeme = lexeme;
                                 }
                                 lexeme = '';
@@ -178,10 +219,15 @@ if (!window.Code2Html) {
                         const lexemeCss = _getLexemeCss(lexemeType);
                         resultLine += '<span class="' + lexemeCss + '">' + lexeme + '</span>';
 
-                        if (lexemeType == 'declaration' || lexemeType == 'statement' || lexemeType == 'class' || lexemeType == 'method') {
+                        if (lexemeType) {
                             prevLexeme = lexeme;
                         }
                         lexeme = '';
+                    }
+
+                    if (lineComment || blockComment) {
+                        lineComment = false;
+                        result += '</span>';
                     }
 
                     for (let i = 0; i < _initialIndent * _outputIndentSize; i++) {
@@ -196,7 +242,6 @@ if (!window.Code2Html) {
                 result += '\n</code>';
                 return result;
             };
-
 
             function _initOptions(options) {
                 if (!options)
@@ -229,6 +274,9 @@ if (!window.Code2Html) {
                 }
                 if ((options.stringEscCss) || (options.stringEscCss === '')) {
                     _stringEscCss = options.stringEscCss;
+                }
+                if ((options.commentCss) || (options.commentCss === '')) {
+                    _commentCss = options.commentCss;
                 }
                 if ((options.normalCss) || (options.normalCss === '')) {
                     _normalCss = options.normalCss;
@@ -299,6 +347,7 @@ function Code2HtmlSample() {
         methodCss: '',
         stringCss: '',
         stringEscCss: '',
+        commentCss: '',
         normalCss: '',
         specialCharCss: '',
         lineCss: '',
