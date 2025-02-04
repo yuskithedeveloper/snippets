@@ -1,41 +1,269 @@
 if (!window.Code2Html) {
     window.Code2Html = {
         create: function (options) {
-            let _codeCss = 'code-block html js';
-            let _tagCss = 'tag';
-            let _tagBraceCss = 'tag-brace';
-            let _declarationCss = 'decl';
-            let _statementCss = 'stmnt';
-            let _classCss = 'class';
-            let _methodCss = 'method';
-            let _stringCss = 'string';
-            let _stringEscCss = 'escape';
-            let _commentCss = 'comment';
-            let _normalCss = 'normal';
-            let _specialCharCss = 'special-char';
-            let _lineCss = 'line';
-
-            let _initialIndent = 0;
-            let _inputIndentSize = 4;
-            let _outputIndentSize = 2;
-
-            _initOptions(options);
+            const _options = _initOptions(options);
 
             const _separators = ['.', ',', ';', ':', '!', '&', '|', '-', '+', '*', '/', '=', '>', '<', '{', '}', '(', ')', '[', ']'];
             const _quotes = ['\'', '"'];
             const _spaces = [' ', '\t'];
             const _esc = ['\\'];
+            const _braces = ['{', '}'];
+            const _commentStarter1 = '/';
+            const _commentStarter2 = '*';
 
             function convert(code) {
                 let result = '';
-                result += '<code class="' + _codeCss + '">\n';
+                result += '<code class="' + _options.codeCss + '">\n';
 
                 const lines = code.split('\n');
+                const codeInfo = _getCodeInfo(lines);
 
-                let minIndent;
+                let prevLexeme = '';
+                let blockComment = false;
+                for (let l = codeInfo.contentStartLine; l <= codeInfo.contentEndLine; l++) {
+                    const line = lines[l];
 
-                let contentStartLine;
-                let contentEndLine;
+                    result += _getOpeningTag(_options.lineCss);
+
+                    let resultLine = '';
+
+                    let lineContentStarted = false;
+                    let stringLiteralQuote = '';
+                    let stringLiteral = false;
+                    let lineComment = false;
+                    let escape = false;
+                    let lexeme = '';
+                    for (let i = 0; i < line.length; i++) {
+                        if (i < codeInfo.minIndent)
+                            continue;
+
+                        const ch = line[i];
+
+                        if (!lineContentStarted) {
+                            if (_spaces.indexOf(ch) >= 0) {
+                                if ((i % _options.inputIndentSize) == 0) {
+                                    for (let i = 0; i < _options.outputIndentSize; i++) {
+                                        resultLine += '&nbsp;';
+                                    }
+                                }
+                                continue;
+                            }
+                            else {
+                                lineContentStarted = true;
+                                if (blockComment) {
+                                    resultLine += _getOpeningTag(_options.commentCss);
+                                }
+                            }
+                        }
+
+                        if ((!stringLiteral) && (!lineComment) && (!blockComment) && (ch === _commentStarter1) && (i < line.length - 1)) {
+                            const nextCh = line[i + 1];
+                            if (nextCh == _commentStarter1) {
+                                lineComment = true;
+                                resultLine += _getOpeningTag(_options.commentCss);
+                                resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
+                                i++;
+                                continue;
+                            }
+                            else if (nextCh == _commentStarter2) {
+                                blockComment = true;
+                                resultLine += _getOpeningTag(_options.commentCss);
+                                resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
+                                i++;
+                                continue;
+                            }
+                        }
+
+                        if (lineComment || blockComment) {
+                            if ((blockComment) && (ch === _commentStarter2) && (i < line.length - 1)) {
+                                const nextCh = line[i + 1];
+                                if (nextCh == _commentStarter1) {
+                                    blockComment = false;
+
+                                    resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
+                                    resultLine += _getClosingTag();
+                                    i++;
+                                    continue;
+                                }
+                            }
+
+                            resultLine += _escapeChar(ch);
+                            continue;
+                        }
+
+                        let escSet = false;
+                        if ((!escape) && (_esc.indexOf(ch) >= 0)) {
+                            escape = true;
+                            escSet = true;
+                            if (stringLiteral) {
+                                resultLine += _getOpeningTag(_options.stringEscCss);
+                            }
+                        }
+
+                        if ((_quotes.indexOf(ch) >= 0) && (!escape)) {
+                            if (!stringLiteral) {
+                                stringLiteral = true;
+                                stringLiteralQuote = ch;
+
+                                resultLine += _getOpeningTag(_options.stringCss);
+                                resultLine += _getContentTag(_options.specialCharCss, ch);
+                            }
+                            else if (stringLiteralQuote === ch) {
+                                stringLiteral = false;
+
+                                resultLine += _getContentTag(_options.specialCharCss, ch);
+                                resultLine += _getClosingTag();
+                            }
+                            else {
+                                resultLine += _getContentTag(_options.specialCharCss, ch);
+                            }
+                        }
+                        else if (!stringLiteral) {
+                            if ((_separators.indexOf(ch) >= 0) || (_spaces.indexOf(ch) >= 0)) {
+                                let nextNonSpaceCh = _getNextNonSpace(line, i);
+                                resultLine += _getLexemeTag(lexeme, prevLexeme, nextNonSpaceCh);
+
+                                if (_spaces.indexOf(ch) >= 0) {
+                                    resultLine += _escapeChar(ch);
+                                }
+                                else {
+                                    resultLine += _getContentTag(_options.specialCharCss, _escapeChar(ch));
+                                }
+
+                                if (lexeme) {
+                                    prevLexeme = lexeme;
+                                    lexeme = '';
+                                }
+                            }
+                            else {
+                                lexeme += ch;
+                            }
+
+                            if (_braces.indexOf(ch) >= 0) {
+                                prevLexeme = '';
+                            }
+                        }
+                        else if (stringLiteral) {
+                            resultLine += _escapeChar(ch);
+                        }
+
+                        if (escape && !escSet) {
+                            escape = false;
+                            if (stringLiteral) {
+                                resultLine += _getClosingTag();
+                            }
+                        }
+                    }
+
+                    if (lexeme) {
+                        resultLine += _getLexemeTag(lexeme, prevLexeme);
+                        if (lexeme) {
+                            prevLexeme = lexeme;
+                            lexeme = '';
+                        }
+                    }
+
+                    if (lineComment || blockComment) {
+                        lineComment = false;
+                        resultLine += _getClosingTag();
+                    }
+
+                    for (let i = 0; i < _options.initialIndent * _options.outputIndentSize; i++) {
+                        resultLine = '&nbsp;' + resultLine;
+                    }
+
+                    result += resultLine;
+                    result += _getClosingTag();
+                    if (l < lines.length - 1) {
+                        result += '\n<br />';
+                    }
+                }
+
+                result += '\n</code>';
+                return result;
+            };
+
+            function _initOptions(options) {
+                let result = {
+                    codeCss: 'code-block html js',
+                    tagCss: 'tag',
+                    tagBraceCss: 'tag-brace',
+                    declarationCss: 'decl',
+                    statementCss: 'stmnt',
+                    classCss: 'class',
+                    methodCss: 'method',
+                    stringCss: 'string',
+                    stringEscCss: 'escape',
+                    commentCss: 'comment',
+                    normalCss: 'normal',
+                    specialCharCss: 'special-char',
+                    lineCss: 'line',
+
+                    initialIndent: 0,
+                    inputIndentSize: 4,
+                    outputIndentSize: 2,
+                };
+                if (!options)
+                    return result;
+
+                if ((options.codeCss) || (options.codeCss === '')) {
+                    result.codeCss = options.codeCss;
+                }
+                if ((options.tagCss) || (options.tagCss === '')) {
+                    result.tagCss = options.tagCss;
+                }
+                if ((options.tagBraceCss) || (options.tagBraceCss === '')) {
+                    result.tagBraceCss = options.tagBraceCss;
+                }
+                if ((options.declarationCss) || (options.declarationCss === '')) {
+                    result.declarationCss = options.declarationCss;
+                }
+                if ((options.statementCss) || (options.statementCss === '')) {
+                    result.statementCss = options.statementCss;
+                }
+                if ((options.classCss) || (options.classCss === '')) {
+                    result.classCss = options.classCss;
+                }
+                if ((options.methodCss) || (options.methodCss === '')) {
+                    result.methodCss = options.methodCss;
+                }
+                if ((options.stringCss) || (options.stringCss === '')) {
+                    result.stringCss = options.stringCss;
+                }
+                if ((options.stringEscCss) || (options.stringEscCss === '')) {
+                    result.stringEscCss = options.stringEscCss;
+                }
+                if ((options.commentCss) || (options.commentCss === '')) {
+                    result.commentCss = options.commentCss;
+                }
+                if ((options.normalCss) || (options.normalCss === '')) {
+                    result.normalCss = options.normalCss;
+                }
+                if ((options.specialCharCss) || (options.specialCharCss === '')) {
+                    result.specialCharCss = options.specialCharCss;
+                }
+                if ((options.lineCss) || (options.lineCss === '')) {
+                    result.lineCss = options.lineCss;
+                }
+
+                if (options.initialIndent) {
+                    result.initialIndent = options.initialIndent;
+                }
+                if (options.inputIndentSize) {
+                    result.inputIndentSize = options.inputIndentSize;
+                }
+                if (options.outputIndentSize) {
+                    result.outputIndentSize = options.outputIndentSize;
+                }
+                return result;
+            }
+
+            function _getCodeInfo(lines) {
+                const result = {
+                    minIndent: undefined,
+                    contentStartLine: undefined,
+                    contentEndLine: undefined,
+                }
                 for (let l = 0; l < lines.length; l++) {
                     const line = lines[l];
 
@@ -53,250 +281,49 @@ if (!window.Code2Html) {
                     }
 
                     if (lineHasContent) {
-                        if (isNaN(contentStartLine)) {
-                            contentStartLine = l;
+                        if (isNaN(result.contentStartLine)) {
+                            result.contentStartLine = l;
                         }
-                        if (isNaN(contentEndLine) || (l > contentEndLine)) {
-                            contentEndLine = l;
+                        if (isNaN(result.contentEndLine) || (l > result.contentEndLine)) {
+                            result.contentEndLine = l;
                         }
-                        if (isNaN(minIndent) || (lineIndent < minIndent)) {
-                            minIndent = lineIndent;
+                        if (isNaN(result.minIndent) || (lineIndent < result.minIndent)) {
+                            result.minIndent = lineIndent;
                         }
                     }
                 }
-
-                let prevLexeme = '';
-                let blockComment = false;
-                for (let l = contentStartLine; l <= contentEndLine; l++) {
-                    const line = lines[l];
-
-                    result += '<span class="' + _lineCss + '">';
-
-                    let resultLine = '';
-
-                    let lineContentStarted = false;
-                    let stringLiteralQuote = '';
-                    let stringLiteral = false;
-                    let lineComment = false;
-                    let escape = false;
-                    let lexeme = '';
-                    for (let i = 0; i < line.length; i++) {
-                        if (i < minIndent)
-                            continue;
-
-                        const ch = line[i];
-
-                        if (!lineContentStarted) {
-                            if (_spaces.indexOf(ch) >= 0) {
-                                if ((i % _inputIndentSize) == 0) {
-                                    for (let i = 0; i < _outputIndentSize; i++) {
-                                        resultLine += '&nbsp;';
-                                    }
-                                }
-                                continue;
-                            }
-                            else {
-                                lineContentStarted = true;
-                                if (blockComment) {
-                                    resultLine += '<span class="' + _commentCss + '">';
-                                }
-                            }
-                        }
-
-                        if ((!stringLiteral) && (!lineComment) && (!blockComment) && (ch === '/') && (i < line.length - 1)) {
-                            const nextCh = line[i + 1];
-                            if (nextCh == '/') {
-                                lineComment = true;
-                                resultLine += '<span class="' + _commentCss + '">';
-                                resultLine += '<span class="' + _specialCharCss + '">' + ch + nextCh + '</span>';
-                                i++;
-                                continue;
-                            }
-                            else if (nextCh == '*') {
-                                blockComment = true;
-                                resultLine += '<span class="' + _commentCss + '">';
-                                resultLine += '<span class="' + _specialCharCss + '">' + ch + nextCh + '</span>';
-                                i++;
-                                continue;
-                            }
-                        }
-
-                        if (lineComment || blockComment) {
-                            if ((blockComment) && (ch === '*') && (i < line.length - 1)) {
-                                const nextCh = line[i + 1];
-                                if (nextCh == '/') {
-                                    blockComment = false;
-
-                                    resultLine += '<span class="' + _specialCharCss + '">' + ch + nextCh + '</span>';
-                                    resultLine += '</span>';
-                                    i++;
-                                    continue;
-                                }
-                            }
-
-                            resultLine += ch;
-                            continue;
-                        }
-
-                        let escSet = false;
-                        if ((!escape) && (_esc.indexOf(ch) >= 0)) {
-                            escape = true;
-                            escSet = true;
-                            if (stringLiteral) {
-                                resultLine += '<span class="' + _stringEscCss + '">';
-                            }
-                        }
-
-                        if ((_quotes.indexOf(ch) >= 0) && (!escape)) {
-                            if (!stringLiteral) {
-                                stringLiteral = true;
-                                stringLiteralQuote = ch;
-
-                                resultLine += '<span class="' + _stringCss + '">';
-                                resultLine += '<span class="' + _specialCharCss + '">' + ch + '</span>';
-                            }
-                            else if (stringLiteralQuote === ch) {
-                                stringLiteral = false;
-
-                                resultLine += '<span class="' + _specialCharCss + '">' + ch + '</span>';
-                                resultLine += '</span>';
-                            }
-                            else {
-                                resultLine += '<span class="' + _specialCharCss + '">' + ch + '</span>';
-                            }
-                        }
-                        else if (!stringLiteral) {
-                            if ((_separators.indexOf(ch) >= 0) || (_spaces.indexOf(ch) >= 0)) {
-                                const lexemeType = _getLexemeType(lexeme, prevLexeme, ch);
-                                const lexemeCss = _getLexemeCss(lexemeType);
-
-                                if (lexeme) {
-                                    resultLine += '<span class="' + lexemeCss + '">' + lexeme + '</span>';
-                                }
-
-                                if (_spaces.indexOf(ch) >= 0) {
-                                    resultLine += ch;
-                                }
-                                else {
-                                    resultLine += '<span class="' + _specialCharCss + '">' + ch + '</span>';
-                                }
-
-                                if (lexemeType) {
-                                    prevLexeme = lexeme;
-                                }
-                                lexeme = '';
-                            }
-                            else {
-                                lexeme += ch;
-                            }
-
-                            if ((ch === '{') || (ch === '}')) {
-                                prevLexeme = '';
-                            }
-                        }
-                        else if (stringLiteral) {
-                            if (ch == '<') {
-                                resultLine += '&lt;';
-                            }
-                            else if (ch == '>') {
-                                resultLine += '&gt;';
-                            }
-                            else {
-                                resultLine += ch;
-                            }
-                        }
-
-                        if (escape && !escSet) {
-                            escape = false;
-                            if (stringLiteral) {
-                                resultLine += '</span>';
-                            }
-                        }
-                    }
-
-                    if (lexeme) {
-                        const lexemeType = _getLexemeType(lexeme, prevLexeme);
-                        const lexemeCss = _getLexemeCss(lexemeType);
-                        resultLine += '<span class="' + lexemeCss + '">' + lexeme + '</span>';
-
-                        if (lexemeType) {
-                            prevLexeme = lexeme;
-                        }
-                        lexeme = '';
-                    }
-
-                    if (lineComment || blockComment) {
-                        lineComment = false;
-                        result += '</span>';
-                    }
-
-                    for (let i = 0; i < _initialIndent * _outputIndentSize; i++) {
-                        resultLine = '&nbsp;' + resultLine;
-                    }
-
-                    result += resultLine;
-                    result += '</span>';
-                    result += '\n<br />';
-                }
-
-                result += '\n</code>';
                 return result;
-            };
+            }
 
-            function _initOptions(options) {
-                if (!options)
-                    return;
+            function _getOpeningTag(cssClass) {
+                return '<span class="' + cssClass + '">';
+            }
 
-                if ((options.codeCss) || (options.codeCss === '')) {
-                    _codeCss = options.codeCss;
-                }
+            function _getClosingTag() {
+                return '</span>';
+            }
 
-                if ((options.tagCss) || (options.tagCss === '')) {
-                    _tagCss = options.tagCss;
-                }
-                if ((options.tagBraceCss) || (options.tagBraceCss === '')) {
-                    _tagBraceCss = options.tagBraceCss;
-                }
-                if ((options.declarationCss) || (options.declarationCss === '')) {
-                    _declarationCss = options.declarationCss;
-                }
-                if ((options.statementCss) || (options.statementCss === '')) {
-                    _statementCss = options.statementCss;
-                }
-                if ((options.classCss) || (options.classCss === '')) {
-                    _classCss = options.classCss;
-                }
-                if ((options.methodCss) || (options.methodCss === '')) {
-                    _methodCss = options.methodCss;
-                }
-                if ((options.stringCss) || (options.stringCss === '')) {
-                    _stringCss = options.stringCss;
-                }
-                if ((options.stringEscCss) || (options.stringEscCss === '')) {
-                    _stringEscCss = options.stringEscCss;
-                }
-                if ((options.commentCss) || (options.commentCss === '')) {
-                    _commentCss = options.commentCss;
-                }
-                if ((options.normalCss) || (options.normalCss === '')) {
-                    _normalCss = options.normalCss;
-                }
-                if ((options.specialCharCss) || (options.specialCharCss === '')) {
-                    _specialCharCss = options.specialCharCss;
-                }
-                if ((options.lineCss) || (options.lineCss === '')) {
-                    _lineCss = options.lineCss;
-                }
+            function _getContentTag(cssClass, content) {
+                return _getOpeningTag(cssClass) + content + _getClosingTag();
+            }
 
-                if (options.initialIndent) {
-                    _initialIndent = options.initialIndent;
-                }
-                if (options.inputIndentSize) {
-                    _inputIndentSize = options.inputIndentSize;
-                }
-                if (options.outputIndentSize) {
-                    _outputIndentSize = options.outputIndentSize;
-                }
+            function _getLexemeTag(lexeme, prevLexeme, nextCh) {
+                if (!lexeme)
+                    return '';
+
+                const lexemeType = _getLexemeType(lexeme, prevLexeme, nextCh);
+                const lexemeCss = _getLexemeCss(lexemeType);
+                return _getContentTag(lexemeCss, lexeme);
+            }
+
+            function _escapeChar(ch) {
+                if (ch == '<')
+                    return '&lt;';
+                else if (ch == '>')
+                    return '&gt;';
+                else if (ch == '&')
+                    return '&amp;';
+                return ch;
             }
 
             function _getLexemeType(lexeme, prevLexeme, nextCh) {
@@ -314,22 +341,29 @@ if (!window.Code2Html) {
 
             function _getLexemeCss(lexemeType) {
                 if (lexemeType === 'tag')
-                    return _tagCss;
+                    return _options.tagCss;
                 if (lexemeType === 'brace')
-                    return _tagBraceCss;
+                    return _options.tagBraceCss;
                 if (lexemeType === 'declaration')
-                    return _declarationCss;
+                    return _options.declarationCss;
                 if (lexemeType === 'statement')
-                    return _statementCss;
+                    return _options.statementCss;
                 if (lexemeType === 'class')
-                    return _classCss;
+                    return _options.classCss;
                 if (lexemeType === 'method')
-                    return _methodCss;
+                    return _options.methodCss;
                 if (lexemeType === 'string')
-                    return _stringCss;
+                    return _options.stringCss;
 
-                return _normalCss;
+                return _options.normalCss;
             };
+
+            function _getNextNonSpace(str, from) {
+                for (let i = from; i < str.length; i++) {
+                    if (_spaces.indexOf(str[i]) < 0)
+                        return str[i]
+                }
+            }
 
             return { convert: convert };
         }
