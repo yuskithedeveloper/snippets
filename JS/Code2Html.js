@@ -1,7 +1,7 @@
 if (!window.Code2Html) {
     window.Code2Html = {
         create: function (lang, options) {
-            const _options = _initOptions(options);
+            const _options = _initOptions(lang, options);
 
             const _lang = _getLang(lang);
 
@@ -179,9 +179,9 @@ if (!window.Code2Html) {
                 return result;
             };
 
-            function _initOptions(options) {
+            function _initOptions(lang, options) {
                 let result = {
-                    codeCss: 'code-block html js',
+                    codeCss: 'code-block html ' + lang,
                     tagCss: 'tag',
                     tagBraceCss: 'tag-brace',
                     declarationCss: 'decl',
