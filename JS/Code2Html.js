@@ -1,15 +1,9 @@
 if (!window.Code2Html) {
     window.Code2Html = {
-        create: function (options) {
+        create: function (lang, options) {
             const _options = _initOptions(options);
 
-            const _separators = ['.', ',', ';', ':', '!', '&', '|', '-', '+', '*', '/', '=', '>', '<', '{', '}', '(', ')', '[', ']'];
-            const _quotes = ['\'', '"'];
-            const _spaces = [' ', '\t'];
-            const _esc = ['\\'];
-            const _braces = ['{', '}'];
-            const _commentStarter1 = '/';
-            const _commentStarter2 = '*';
+            const _lang = _getLang(lang);
 
             function convert(code) {
                 let result = '';
@@ -40,7 +34,7 @@ if (!window.Code2Html) {
                         const ch = line[i];
 
                         if (!lineContentStarted) {
-                            if (_spaces.indexOf(ch) >= 0) {
+                            if (_lang.spaces.indexOf(ch) >= 0) {
                                 if ((i % _options.inputIndentSize) == 0) {
                                     for (let i = 0; i < _options.outputIndentSize; i++) {
                                         resultLine += '&nbsp;';
@@ -56,16 +50,16 @@ if (!window.Code2Html) {
                             }
                         }
 
-                        if ((!stringLiteral) && (!lineComment) && (!blockComment) && (ch === _commentStarter1) && (i < line.length - 1)) {
+                        if ((!stringLiteral) && (!lineComment) && (!blockComment) && (ch === _lang.commentStarter1) && (i < line.length - 1)) {
                             const nextCh = line[i + 1];
-                            if (nextCh == _commentStarter1) {
+                            if (nextCh == _lang.commentStarter1) {
                                 lineComment = true;
                                 resultLine += _getOpeningTag(_options.commentCss);
                                 resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
                                 i++;
                                 continue;
                             }
-                            else if (nextCh == _commentStarter2) {
+                            else if (nextCh == _lang.commentStarter2) {
                                 blockComment = true;
                                 resultLine += _getOpeningTag(_options.commentCss);
                                 resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
@@ -75,9 +69,9 @@ if (!window.Code2Html) {
                         }
 
                         if (lineComment || blockComment) {
-                            if ((blockComment) && (ch === _commentStarter2) && (i < line.length - 1)) {
+                            if ((blockComment) && (ch === _lang.commentStarter2) && (i < line.length - 1)) {
                                 const nextCh = line[i + 1];
-                                if (nextCh == _commentStarter1) {
+                                if (nextCh == _lang.commentStarter1) {
                                     blockComment = false;
 
                                     resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
@@ -92,7 +86,7 @@ if (!window.Code2Html) {
                         }
 
                         let escSet = false;
-                        if ((!escape) && (_esc.indexOf(ch) >= 0)) {
+                        if ((!escape) && (_lang.esc.indexOf(ch) >= 0)) {
                             escape = true;
                             escSet = true;
                             if (stringLiteral) {
@@ -100,7 +94,7 @@ if (!window.Code2Html) {
                             }
                         }
 
-                        if ((_quotes.indexOf(ch) >= 0) && (!escape)) {
+                        if ((_lang.quotes.indexOf(ch) >= 0) && (!escape)) {
                             if (!stringLiteral) {
                                 stringLiteral = true;
                                 stringLiteralQuote = ch;
@@ -119,11 +113,12 @@ if (!window.Code2Html) {
                             }
                         }
                         else if (!stringLiteral) {
-                            if ((_separators.indexOf(ch) >= 0) || (_spaces.indexOf(ch) >= 0)) {
-                                let nextNonSpaceCh = _getNextNonSpace(line, i);
-                                resultLine += _getLexemeTag(lexeme, prevLexeme, nextNonSpaceCh);
+                            if ((_lang.separators.indexOf(ch) >= 0) || (_lang.spaces.indexOf(ch) >= 0)) {
+                                const nextNonSpaceCh = _getNextNonSpace(line, i);
+                                const prevNonSpaceCh = _getPrevNonSpace(line, i - lexeme.length);
+                                resultLine += _getLexemeTag(lexeme, prevLexeme, prevNonSpaceCh, nextNonSpaceCh);
 
-                                if (_spaces.indexOf(ch) >= 0) {
+                                if (_lang.spaces.indexOf(ch) >= 0) {
                                     resultLine += _escapeChar(ch);
                                 }
                                 else {
@@ -139,7 +134,7 @@ if (!window.Code2Html) {
                                 lexeme += ch;
                             }
 
-                            if (_braces.indexOf(ch) >= 0) {
+                            if (_lang.braces.indexOf(ch) >= 0) {
                                 prevLexeme = '';
                             }
                         }
@@ -156,7 +151,8 @@ if (!window.Code2Html) {
                     }
 
                     if (lexeme) {
-                        resultLine += _getLexemeTag(lexeme, prevLexeme);
+                        const prevNonSpaceCh = _getPrevNonSpace(line, line.length - lexeme.length - 1);
+                        resultLine += _getLexemeTag(lexeme, prevLexeme, prevNonSpaceCh);
                         if (lexeme) {
                             prevLexeme = lexeme;
                             lexeme = '';
@@ -258,6 +254,62 @@ if (!window.Code2Html) {
                 return result;
             }
 
+            function _getLang(lang) {
+                if (lang === 'js')
+                    return {
+                        separators: ['.', ',', ';', ':', '!', '&', '|', '-', '+', '*', '/', '=', '>', '<', '{', '}', '(', ')', '[', ']'],
+                        quotes: ['\'', '"'],
+                        spaces: [' ', '\t'],
+                        esc: ['\\'],
+                        braces: ['{', '}'],
+                        callOpeningBrace: '(',
+                        classPrecedings: ['new'],
+                        inheritanceChar: ':',
+                        knownClasses: [],
+                        declarations: ['new', 'var', 'const', 'let', 'function', 'class', 'true', 'false', 'null', 'undefined'],
+                        statements: ['for', 'while', 'break', 'continue', 'if', 'else', 'switch', 'case', 'default', 'try', 'catch', 'finally', 'return'],
+                        commentStarter1: '/',
+                        commentStarter2: '*',
+                    };
+                if (lang == 'csharp') {
+                    return {
+                        separators: ['.', ',', ';', ':', '!', '&', '|', '-', '+', '*', '/', '=', '>', '<', '{', '}', '(', ')', '[', ']'],
+                        quotes: ['\'', '"'],
+                        spaces: [' ', '\t'],
+                        esc: ['\\'],
+                        braces: ['{', '}'],
+                        callOpeningBrace: '(',
+                        classPrecedings: ['new', 'class'],
+                        inheritanceChar: ':',
+                        knownClasses: ['String', 'Int16', 'Int32', 'Int64', 'Boolean', 'Char', 'Byte', 'Single', 'Double', 'Object',
+                            'List', 'IList', 'Dictionary', 'IDictionary', 'HashSet', 'ICollection', 'IEnumerable', 'Enumerable', 'Array',
+                            'Exception', 'ArgumentException', 'ArgumentNullException', 'ArgumentOutOfRangeException',
+                            'StringBuilder', 'StringSplitOptions', 'StringComparer', 'StringComparison', 'IEqualityComparer', 'EqualityComparer',
+                            'Task', 'Thread', 'Program', 'Console', 'GC', 'Stopwatch', 'DBNull', 'IDisposable'],
+                        declarations: ['new', 'var', 'const', 'function', 'class', 'true', 'false', 'null', 'namespace', 'using', 'public', 'private', 'internal', 'protected', 'static', 'void', 'bool', 'string', 'int', 'double', 'float', 'byte', 'long', 'char', 'object'],
+                        statements: ['for', 'while', 'break', 'foreach', 'continue', 'if', 'else', 'switch', 'case', 'default', 'try', 'catch', 'finally', 'return'],
+                        commentStarter1: '/',
+                        commentStarter2: '*',
+                    };
+                }
+
+                return {
+                    separators: ['.', ',', ';', ':', '!', '&', '|', '-', '+', '*', '/', '=', '>', '<', '{', '}', '(', ')', '[', ']'],
+                    quotes: ['\'', '"'],
+                    spaces: [' ', '\t'],
+                    esc: ['\\'],
+                    braces: ['{', '}'],
+                    callOpeningBrace: '(',
+                    classPrecedings: ['new'],
+                    inheritanceChar: ':',
+                    knownClasses: [],
+                    declarations: ['new', 'var', 'const', 'let', 'function', 'class', 'true', 'false', 'null', 'undefined'],
+                    statements: ['for', 'while', 'break', 'continue', 'if', 'else', 'switch', 'case', 'default', 'try', 'catch', 'finally', 'return'],
+                    commentStarter1: '/',
+                    commentStarter2: '*',
+                };
+            }
+
             function _getCodeInfo(lines) {
                 const result = {
                     minIndent: undefined,
@@ -271,7 +323,7 @@ if (!window.Code2Html) {
                     let lineIndent = 0;
                     for (let i = 0; i < line.length; i++) {
                         const ch = line[i];
-                        if (_spaces.indexOf(ch) >= 0) {
+                        if (_lang.spaces.indexOf(ch) >= 0) {
                             lineIndent++;
                         }
                         else {
@@ -307,15 +359,6 @@ if (!window.Code2Html) {
                 return _getOpeningTag(cssClass) + content + _getClosingTag();
             }
 
-            function _getLexemeTag(lexeme, prevLexeme, nextCh) {
-                if (!lexeme)
-                    return '';
-
-                const lexemeType = _getLexemeType(lexeme, prevLexeme, nextCh);
-                const lexemeCss = _getLexemeCss(lexemeType);
-                return _getContentTag(lexemeCss, lexeme);
-            }
-
             function _escapeChar(ch) {
                 if (ch == '<')
                     return '&lt;';
@@ -326,42 +369,44 @@ if (!window.Code2Html) {
                 return ch;
             }
 
-            function _getLexemeType(lexeme, prevLexeme, nextCh) {
-                if (lexeme === 'new' || lexeme === 'var' || lexeme === 'const' || lexeme === 'let' || lexeme === 'function' || lexeme === 'class' || lexeme === 'true' || lexeme === 'false')
-                    return 'declaration';
-                if (lexeme === 'for' || lexeme === 'while' || lexeme === 'break' || lexeme === 'continue' || lexeme === 'if' || lexeme === 'else' || lexeme === 'switch' || lexeme === 'case' || lexeme === 'default' || lexeme === 'return')
-                    return 'statement';
-                if (nextCh === '(') {
-                    if (prevLexeme === 'new')
-                        return 'class';
-                    else if (lexeme !== '')
-                        return 'method';
-                }
-            };
+            function _getLexemeTag(lexeme, prevLexeme, prevCh, nextCh) {
+                if (!lexeme)
+                    return '';
 
-            function _getLexemeCss(lexemeType) {
-                if (lexemeType === 'tag')
-                    return _options.tagCss;
-                if (lexemeType === 'brace')
-                    return _options.tagBraceCss;
-                if (lexemeType === 'declaration')
+                const lexemeCss = _getLexemeCss(lexeme, prevLexeme, prevCh, nextCh);
+                return _getContentTag(lexemeCss, lexeme);
+            }
+
+            function _getLexemeCss(lexeme, prevLexeme, prevCh, nextCh) {
+                if (_lang.declarations.indexOf(lexeme) >= 0)
                     return _options.declarationCss;
-                if (lexemeType === 'statement')
+                if (_lang.statements.indexOf(lexeme) >= 0)
                     return _options.statementCss;
-                if (lexemeType === 'class')
+                if (_lang.knownClasses.indexOf(lexeme) >= 0)
                     return _options.classCss;
-                if (lexemeType === 'method')
+                if (_lang.classPrecedings.indexOf(prevLexeme) >= 0)
+                    return _options.classCss;
+                if ((prevCh == _lang.inheritanceChar) && (_lang.declarations.indexOf(prevLexeme) < 0) && (_lang.statements.indexOf(prevLexeme) < 0) && (_lang.classPrecedings.indexOf(prevLexeme) < 0))
+                    return _options.classCss;
+
+                if ((nextCh === _lang.callOpeningBrace) && (lexeme !== ''))
                     return _options.methodCss;
-                if (lexemeType === 'string')
-                    return _options.stringCss;
 
                 return _options.normalCss;
             };
 
             function _getNextNonSpace(str, from) {
                 for (let i = from; i < str.length; i++) {
-                    if (_spaces.indexOf(str[i]) < 0)
+                    if (_lang.spaces.indexOf(str[i]) < 0)
                         return str[i]
+                }
+            }
+
+            function _getPrevNonSpace(str, from) {
+                for (let i = from; i >= 0; i--) {
+                    if (_lang.spaces.indexOf(str[i]) < 0) {
+                        return str[i];
+                    }
                 }
             }
 
@@ -392,5 +437,5 @@ function Code2HtmlSample() {
     };
 
     const code = 'if (myVar == 1) return true; else return false;';
-    const html = Code2Html.create(options).convert(code);
+    const html = Code2Html.create('js' /*js | csharp*/, options).convert(code);
 }
