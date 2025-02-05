@@ -25,7 +25,6 @@ if (!window.Code2Html) {
                     let stringLiteralQuote = '';
                     let stringLiteral = false;
                     let lineComment = false;
-                    let escape = false;
                     let lexeme = '';
                     for (let i = 0; i < line.length; i++) {
                         if (i < codeInfo.minIndent)
@@ -73,7 +72,6 @@ if (!window.Code2Html) {
                                 const nextCh = line[i + 1];
                                 if (nextCh == _lang.commentStarter1) {
                                     blockComment = false;
-
                                     resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
                                     resultLine += _getClosingTag();
                                     i++;
@@ -85,16 +83,16 @@ if (!window.Code2Html) {
                             continue;
                         }
 
-                        let escSet = false;
-                        if ((!escape) && (_lang.esc.indexOf(ch) >= 0)) {
-                            escape = true;
-                            escSet = true;
-                            if (stringLiteral) {
-                                resultLine += _getOpeningTag(_options.stringEscCss);
-                            }
+                        if ((stringLiteral) && (_lang.esc.indexOf(ch) >= 0)) {
+                            const nextCh = line[i + 1];
+                            resultLine += _getOpeningTag(_options.stringEscCss);
+                            resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
+                            resultLine += _getClosingTag();
+                            i++;
+                            continue;
                         }
 
-                        if ((_lang.quotes.indexOf(ch) >= 0) && (!escape)) {
+                        if ((_lang.quotes.indexOf(ch) >= 0)) {
                             if (!stringLiteral) {
                                 stringLiteral = true;
                                 stringLiteralQuote = ch;
@@ -140,13 +138,6 @@ if (!window.Code2Html) {
                         }
                         else if (stringLiteral) {
                             resultLine += _escapeChar(ch);
-                        }
-
-                        if (escape && !escSet) {
-                            escape = false;
-                            if (stringLiteral) {
-                                resultLine += _getClosingTag();
-                            }
                         }
                     }
 
