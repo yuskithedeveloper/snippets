@@ -172,7 +172,7 @@ if (!window.Code2Html) {
 
             function _initOptions(lang, options) {
                 let result = {
-                    codeCss: 'code-block html ' + lang,
+                    codeCss: 'code-block ' + lang,
                     tagCss: 'tag',
                     tagBraceCss: 'tag-brace',
                     declarationCss: 'decl',
