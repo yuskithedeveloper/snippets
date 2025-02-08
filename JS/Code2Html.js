@@ -215,7 +215,7 @@ if (!window.Code2Html) {
 
                     initialIndent: 0,
                     inputIndentSize: 4,
-                    outputIndentSize: 2,
+                    outputIndentSize: 4,
                 };
                 if (!options)
                     return result;
@@ -307,7 +307,7 @@ if (!window.Code2Html) {
                             'StringBuilder', 'StringSplitOptions', 'StringComparer', 'StringComparison', 'IEqualityComparer', 'EqualityComparer',
                             'Task', 'Thread', 'Program', 'Console', 'GC', 'Stopwatch', 'DBNull', 'IDisposable'],
                         declarations: ['new', 'var', 'const', 'function', 'class', 'true', 'false', 'null', 'namespace', 'using', 'public', 'private', 'internal', 'protected', 'static', 'void', 'bool', 'string', 'int', 'double', 'float', 'byte', 'long', 'char', 'object'],
-                        statements: ['for', 'while', 'break', 'foreach', 'continue', 'if', 'else', 'switch', 'case', 'default', 'try', 'catch', 'finally', 'return'],
+                        statements: ['for', 'while', 'break', 'foreach', 'in', 'continue', 'if', 'else', 'switch', 'case', 'default', 'try', 'catch', 'finally', 'return'],
                         commentStarter1: '/',
                         commentStarter2: '*',
                     };
