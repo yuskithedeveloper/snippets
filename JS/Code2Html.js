@@ -306,7 +306,7 @@ if (!window.Code2Html) {
                             'Exception', 'ArgumentException', 'ArgumentNullException', 'ArgumentOutOfRangeException',
                             'StringBuilder', 'StringSplitOptions', 'StringComparer', 'StringComparison', 'IEqualityComparer', 'EqualityComparer',
                             'Task', 'Thread', 'Program', 'Console', 'GC', 'Stopwatch', 'DBNull', 'IDisposable'],
-                        declarations: ['new', 'var', 'const', 'function', 'class', 'true', 'false', 'null', 'namespace', 'using', 'public', 'private', 'internal', 'protected', 'static', 'void', 'bool', 'string', 'int', 'double', 'float', 'byte', 'long', 'char', 'object'],
+                        declarations: ['new', 'var', 'const', 'function', 'class', 'true', 'false', 'null', 'namespace', 'using', 'public', 'private', 'internal', 'protected', 'static', 'get', 'set', 'void', 'bool', 'string', 'int', 'double', 'float', 'byte', 'long', 'char', 'object'],
                         statements: ['for', 'while', 'break', 'foreach', 'in', 'continue', 'if', 'else', 'switch', 'case', 'default', 'try', 'catch', 'finally', 'return'],
                         commentStarter1: '/',
                         commentStarter2: '*',
