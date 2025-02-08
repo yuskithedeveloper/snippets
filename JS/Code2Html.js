@@ -24,6 +24,7 @@ if (!window.Code2Html) {
                     let lineContentStarted = false;
                     let stringLiteralQuote = '';
                     let stringLiteral = false;
+                    let stringInterpolation = false;
                     let lineComment = false;
                     let lexeme = '';
                     for (let i = 0; i < line.length; i++) {
@@ -92,16 +93,29 @@ if (!window.Code2Html) {
                             continue;
                         }
 
-                        if ((_lang.quotes.indexOf(ch) >= 0)) {
+                        if ((_lang.quotes.indexOf(ch) >= 0) || (ch === _lang.interpolation)) {
                             if (!stringLiteral) {
-                                stringLiteral = true;
-                                stringLiteralQuote = ch;
-
-                                resultLine += _getOpeningTag(_options.stringCss);
-                                resultLine += _getContentTag(_options.specialCharCss, ch);
+                                if ((ch === _lang.interpolation) && (i < line.length - 1)) {
+                                    const nextCh = line[i + 1];
+                                    if (_lang.quotes.indexOf(nextCh) >= 0) {
+                                        stringLiteral = true;
+                                        stringInterpolation = true;
+                                        stringLiteralQuote = nextCh;
+                                        resultLine += _getOpeningTag(_options.stringCss);
+                                        resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
+                                        i++;
+                                    }
+                                }
+                                else if (_lang.quotes.indexOf(ch) >= 0) {
+                                    stringLiteral = true;
+                                    stringLiteralQuote = ch;
+                                    resultLine += _getOpeningTag(_options.stringCss);
+                                    resultLine += _getContentTag(_options.specialCharCss, ch);
+                                }
                             }
                             else if (stringLiteralQuote === ch) {
                                 stringLiteral = false;
+                                stringInterpolation = false;
 
                                 resultLine += _getContentTag(_options.specialCharCss, ch);
                                 resultLine += _getClosingTag();
@@ -132,12 +146,25 @@ if (!window.Code2Html) {
                                 lexeme += ch;
                             }
 
-                            if (_lang.braces.indexOf(ch) >= 0) {
+                            if (stringInterpolation && (_lang.interpolationBraces.indexOf(ch) >= 0)) {
+                                resultLine += _getOpeningTag(_options.stringCss);
+                                stringLiteral = true;
+
+                                prevLexeme = '';
+                            }
+                            else if (_lang.braces.indexOf(ch) >= 0) {
                                 prevLexeme = '';
                             }
                         }
                         else if (stringLiteral) {
-                            resultLine += _escapeChar(ch);
+                            if (stringInterpolation && (_lang.interpolationBraces.indexOf(ch) >= 0)) {
+                                resultLine += _getClosingTag();
+                                resultLine += _getContentTag(_options.specialCharCss, ch);
+                                stringLiteral = false;
+                            }
+                            else {
+                                resultLine += _escapeChar(ch);
+                            }
                         }
                     }
 
@@ -248,7 +275,7 @@ if (!window.Code2Html) {
             function _getLang(lang) {
                 if (lang === 'js')
                     return {
-                        separators: ['.', ',', ';', ':', '!', '&', '|', '-', '+', '*', '/', '=', '>', '<', '{', '}', '(', ')', '[', ']'],
+                        separators: ['.', ',', ';', ':', '!', '&', '|', '-', '+', '*', '/', '%', '=', '>', '<', '{', '}', '(', ')', '[', ']'],
                         quotes: ['\'', '"'],
                         spaces: [' ', '\t'],
                         esc: ['\\'],
@@ -264,8 +291,10 @@ if (!window.Code2Html) {
                     };
                 if (lang == 'csharp') {
                     return {
-                        separators: ['.', ',', ';', ':', '!', '&', '|', '-', '+', '*', '/', '=', '>', '<', '{', '}', '(', ')', '[', ']'],
+                        separators: ['.', ',', ';', ':', '!', '&', '$', '|', '-', '+', '*', '/', '%', '=', '>', '<', '{', '}', '(', ')', '[', ']'],
                         quotes: ['\'', '"'],
+                        interpolation: '$',
+                        interpolationBraces: ['{', '}'],
                         spaces: [' ', '\t'],
                         esc: ['\\'],
                         braces: ['{', '}'],
@@ -285,7 +314,7 @@ if (!window.Code2Html) {
                 }
 
                 return {
-                    separators: ['.', ',', ';', ':', '!', '&', '|', '-', '+', '*', '/', '=', '>', '<', '{', '}', '(', ')', '[', ']'],
+                    separators: ['.', ',', ';', ':', '!', '&', '|', '-', '+', '*', '/', '%', '=', '>', '<', '{', '}', '(', ')', '[', ']'],
                     quotes: ['\'', '"'],
                     spaces: [' ', '\t'],
                     esc: ['\\'],
