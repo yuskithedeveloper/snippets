@@ -7,7 +7,7 @@ using Novell.Directory.Ldap;
 namespace YuskiTheDeveloper.Ldap
 {
     public class LdapHelper
-    {a
+    {
         /// <param name="host">domain name or IP address are valid</param>
         /// <param name="port">standard ports are 389, 636 (ldaps) for local domain controller and 3268, 3269 (ldaps) for global catalog</param>
         public LdapHelper(string host, int port)
