@@ -5,9 +5,15 @@ if (!window.Code2Html) {
 
             const _lang = _getLang(lang);
 
+            for (let i = 0; i < _options.knownClasses.length; i++) {
+                _lang.knownClasses.push(_options.knownClasses[i]);
+            }
+
             function convert(code) {
                 let result = '';
-                result += '<code class="' + _options.codeCss + '">\n';
+                if (!_options.disableCodeTag) {
+                    result += '<code class="' + _options.codeCss + '">\n';
+                }
 
                 const lines = code.split('\n');
                 const codeInfo = _getCodeInfo(lines);
@@ -193,7 +199,9 @@ if (!window.Code2Html) {
                     }
                 }
 
-                result += '\n</code>';
+                if (!_options.disableCodeTag) {
+                    result += '\n</code>';
+                }
                 return result;
             };
 
@@ -216,6 +224,10 @@ if (!window.Code2Html) {
                     initialIndent: 0,
                     inputIndentSize: 4,
                     outputIndentSize: 4,
+
+                    knownClasses: [],
+
+                    disableCodeTag: false,
                 };
                 if (!options)
                     return result;
@@ -268,6 +280,14 @@ if (!window.Code2Html) {
                 }
                 if (options.outputIndentSize) {
                     result.outputIndentSize = options.outputIndentSize;
+                }
+
+                if (options.knownClasses) {
+                    result.knownClasses = options.knownClasses;
+                }
+
+                if ((options.disableCodeTag === true) || (options.disableCodeTag === false)) {
+                    result.disableCodeTag = options.disableCodeTag;
                 }
                 return result;
             }
