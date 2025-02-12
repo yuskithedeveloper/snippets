@@ -228,6 +228,8 @@ if (!window.Code2Html) {
                     knownClasses: [],
 
                     disableCodeTag: false,
+
+                    elementTag: 'span'
                 };
                 if (!options)
                     return result;
@@ -289,6 +291,10 @@ if (!window.Code2Html) {
                 if ((options.disableCodeTag === true) || (options.disableCodeTag === false)) {
                     result.disableCodeTag = options.disableCodeTag;
                 }
+
+                if (options.elementTag) {
+                    result.elementTag = options.elementTag;
+                }
                 return result;
             }
 
@@ -326,8 +332,8 @@ if (!window.Code2Html) {
                             'Exception', 'ArgumentException', 'ArgumentNullException', 'ArgumentOutOfRangeException',
                             'StringBuilder', 'StringSplitOptions', 'StringComparer', 'StringComparison', 'IEqualityComparer', 'EqualityComparer',
                             'Task', 'Thread', 'Program', 'Console', 'GC', 'Stopwatch', 'DBNull', 'IDisposable'],
-                        declarations: ['new', 'var', 'const', 'function', 'class', 'true', 'false', 'null', 'namespace', 'using', 'public', 'private', 'internal', 'protected', 'static', 'get', 'set', 'void', 'bool', 'string', 'int', 'double', 'float', 'byte', 'long', 'char', 'object'],
-                        statements: ['for', 'while', 'break', 'foreach', 'in', 'continue', 'if', 'else', 'switch', 'case', 'default', 'try', 'catch', 'finally', 'return'],
+                        declarations: ['new', 'var', 'const', 'function', 'class', 'true', 'false', 'null', 'namespace', 'using', 'public', 'private', 'internal', 'protected', 'static', 'readonly', 'get', 'set', 'void', 'bool', 'string', 'int', 'double', 'float', 'byte', 'long', 'char', 'object'],
+                        statements: ['for', 'while', 'break', 'foreach', 'in', 'continue', 'if', 'else', 'switch', 'case', 'default', 'try', 'catch', 'finally', 'throw', 'return'],
                         commentStarter1: '/',
                         commentStarter2: '*',
                     };
@@ -388,11 +394,11 @@ if (!window.Code2Html) {
             }
 
             function _getOpeningTag(cssClass) {
-                return '<span class="' + cssClass + '">';
+                return '<' + _options.elementTag + ' class="' + cssClass + '">';
             }
 
             function _getClosingTag() {
-                return '</span>';
+                return '</' + _options.elementTag + '>';
             }
 
             function _getContentTag(cssClass, content) {
