@@ -23,7 +23,7 @@ if (!window.Code2Html) {
                 for (let l = codeInfo.contentStartLine; l <= codeInfo.contentEndLine; l++) {
                     const line = lines[l];
 
-                    result += _getOpeningTag(_options.lineCss);
+                    result += _getOpeningTag(_options.lineTag, _options.lineCss);
 
                     let resultLine = '';
 
@@ -41,17 +41,21 @@ if (!window.Code2Html) {
 
                         if (!lineContentStarted) {
                             if (_lang.spaces.indexOf(ch) >= 0) {
+                                let indent = '';
                                 if ((i % _options.inputIndentSize) == 0) {
                                     for (let i = 0; i < _options.outputIndentSize; i++) {
-                                        resultLine += '&nbsp;';
+                                        indent += ' ';
                                     }
+                                }
+                                if (indent) {
+                                    resultLine += _getContentTag(_options.indentTag, _options.indentCss, indent);
                                 }
                                 continue;
                             }
                             else {
                                 lineContentStarted = true;
                                 if (blockComment) {
-                                    resultLine += _getOpeningTag(_options.commentCss);
+                                    resultLine += _getOpeningTag(_options.commentTag, _options.commentCss);
                                 }
                             }
                         }
@@ -60,15 +64,15 @@ if (!window.Code2Html) {
                             const nextCh = line[i + 1];
                             if (nextCh == _lang.commentStarter1) {
                                 lineComment = true;
-                                resultLine += _getOpeningTag(_options.commentCss);
-                                resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
+                                resultLine += _getOpeningTag(_options.commentTag, _options.commentCss);
+                                resultLine += _getContentTag(_options.specialCharTag, _options.specialCharCss, ch + nextCh);
                                 i++;
                                 continue;
                             }
                             else if (nextCh == _lang.commentStarter2) {
                                 blockComment = true;
-                                resultLine += _getOpeningTag(_options.commentCss);
-                                resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
+                                resultLine += _getOpeningTag(_options.commentTag, _options.commentCss);
+                                resultLine += _getContentTag(_options.specialCharTag, _options.specialCharCss, ch + nextCh);
                                 i++;
                                 continue;
                             }
@@ -79,8 +83,8 @@ if (!window.Code2Html) {
                                 const nextCh = line[i + 1];
                                 if (nextCh == _lang.commentStarter1) {
                                     blockComment = false;
-                                    resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
-                                    resultLine += _getClosingTag();
+                                    resultLine += _getContentTag(_options.specialCharTag, _options.specialCharCss, ch + nextCh);
+                                    resultLine += _getClosingTag(_options.commentTag);
                                     i++;
                                     continue;
                                 }
@@ -92,9 +96,9 @@ if (!window.Code2Html) {
 
                         if ((stringLiteral) && (_lang.esc.indexOf(ch) >= 0)) {
                             const nextCh = line[i + 1];
-                            resultLine += _getOpeningTag(_options.stringEscCss);
-                            resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
-                            resultLine += _getClosingTag();
+                            resultLine += _getOpeningTag(_options.stringEscTag, _options.stringEscCss);
+                            resultLine += _getContentTag(_options.specialCharTag, _options.specialCharCss, ch + nextCh);
+                            resultLine += _getClosingTag(_options.stringEscTag);
                             i++;
                             continue;
                         }
@@ -107,27 +111,27 @@ if (!window.Code2Html) {
                                         stringLiteral = true;
                                         stringInterpolation = true;
                                         stringLiteralQuote = nextCh;
-                                        resultLine += _getOpeningTag(_options.stringCss);
-                                        resultLine += _getContentTag(_options.specialCharCss, ch + nextCh);
+                                        resultLine += _getOpeningTag(_options.stringTag, _options.stringCss);
+                                        resultLine += _getContentTag(_options.specialCharTag, _options.specialCharCss, ch + nextCh);
                                         i++;
                                     }
                                 }
                                 else if (_lang.quotes.indexOf(ch) >= 0) {
                                     stringLiteral = true;
                                     stringLiteralQuote = ch;
-                                    resultLine += _getOpeningTag(_options.stringCss);
-                                    resultLine += _getContentTag(_options.specialCharCss, ch);
+                                    resultLine += _getOpeningTag(_options.stringTag, _options.stringCss);
+                                    resultLine += _getContentTag(_options.specialCharTag, _options.specialCharCss, ch);
                                 }
                             }
                             else if (stringLiteralQuote === ch) {
                                 stringLiteral = false;
                                 stringInterpolation = false;
 
-                                resultLine += _getContentTag(_options.specialCharCss, ch);
-                                resultLine += _getClosingTag();
+                                resultLine += _getContentTag(_options.specialCharTag, _options.specialCharCss, ch);
+                                resultLine += _getClosingTag(_options.stringTag);
                             }
                             else {
-                                resultLine += _getContentTag(_options.specialCharCss, ch);
+                                resultLine += _getContentTag(_options.specialCharTag, _options.specialCharCss, ch);
                             }
                         }
                         else if (!stringLiteral) {
@@ -140,7 +144,7 @@ if (!window.Code2Html) {
                                     resultLine += _escapeChar(ch);
                                 }
                                 else {
-                                    resultLine += _getContentTag(_options.specialCharCss, _escapeChar(ch));
+                                    resultLine += _getContentTag(_options.specialCharTag, _options.specialCharCss, _escapeChar(ch));
                                 }
 
                                 if (lexeme) {
@@ -153,7 +157,7 @@ if (!window.Code2Html) {
                             }
 
                             if (stringInterpolation && (_lang.interpolationBraces.indexOf(ch) >= 0)) {
-                                resultLine += _getOpeningTag(_options.stringCss);
+                                resultLine += _getOpeningTag(_options.stringTag, _options.stringCss);
                                 stringLiteral = true;
 
                                 prevLexeme = '';
@@ -164,8 +168,8 @@ if (!window.Code2Html) {
                         }
                         else if (stringLiteral) {
                             if (stringInterpolation && (_lang.interpolationBraces.indexOf(ch) >= 0)) {
-                                resultLine += _getClosingTag();
-                                resultLine += _getContentTag(_options.specialCharCss, ch);
+                                resultLine += _getClosingTag(_options.stringTag);
+                                resultLine += _getContentTag(_options.specialCharTag, _options.specialCharCss, ch);
                                 stringLiteral = false;
                             }
                             else {
@@ -185,15 +189,19 @@ if (!window.Code2Html) {
 
                     if (lineComment || blockComment) {
                         lineComment = false;
-                        resultLine += _getClosingTag();
+                        resultLine += _getClosingTag(_options.commentTag);
                     }
 
+                    let indent = '';
                     for (let i = 0; i < _options.initialIndent * _options.outputIndentSize; i++) {
-                        resultLine = '&nbsp;' + resultLine;
+                        indent += ' ';
+                    }
+                    if (indent) {
+                        resultLine = _getContentTag(_options.indentTag, _options.indentCss, indent) + resultLine;
                     }
 
                     result += resultLine;
-                    result += _getClosingTag();
+                    result += _getClosingTag(_options.lineTag);
                     if (l < lines.length - 1) {
                         result += '\n<br />';
                     }
@@ -208,18 +216,30 @@ if (!window.Code2Html) {
             function _initOptions(lang, options) {
                 let result = {
                     codeCss: 'code-block ' + lang,
-                    tagCss: 'tag',
-                    tagBraceCss: 'tag-brace',
+                    defaultTag: 'span',
+
                     declarationCss: 'decl',
+                    declarationTag: '',
                     statementCss: 'stmnt',
+                    statementTag: '',
                     classCss: 'class',
+                    classTag: '',
                     methodCss: 'method',
+                    methodTag: '',
                     stringCss: 'string',
+                    stringTag: '',
                     stringEscCss: 'escape',
+                    stringEscTag: '',
                     commentCss: 'comment',
+                    commentTag: '',
                     normalCss: 'normal',
+                    normalTag: '',
                     specialCharCss: 'special-char',
+                    specialCharTag: '',
                     lineCss: 'line',
+                    lineTag: '',
+                    indentCss: 'indent',
+                    indentTag: '',
 
                     initialIndent: 0,
                     inputIndentSize: 4,
@@ -229,7 +249,6 @@ if (!window.Code2Html) {
 
                     disableCodeTag: false,
 
-                    elementTag: 'span'
                 };
                 if (!options)
                     return result;
@@ -237,41 +256,75 @@ if (!window.Code2Html) {
                 if ((options.codeCss) || (options.codeCss === '')) {
                     result.codeCss = options.codeCss;
                 }
-                if ((options.tagCss) || (options.tagCss === '')) {
-                    result.tagCss = options.tagCss;
+                if (options.defaultTag) {
+                    result.defaultTag = options.defaultTag;
                 }
-                if ((options.tagBraceCss) || (options.tagBraceCss === '')) {
-                    result.tagBraceCss = options.tagBraceCss;
-                }
+
                 if ((options.declarationCss) || (options.declarationCss === '')) {
                     result.declarationCss = options.declarationCss;
+                }
+                if ((options.declarationTag) || (options.declarationTag === '')) {
+                    result.declarationTag = options.declarationTag;
                 }
                 if ((options.statementCss) || (options.statementCss === '')) {
                     result.statementCss = options.statementCss;
                 }
+                if ((options.statementTag) || (options.statementTag === '')) {
+                    result.statementTag = options.statementTag;
+                }
                 if ((options.classCss) || (options.classCss === '')) {
                     result.classCss = options.classCss;
+                }
+                if ((options.classTag) || (options.classTag === '')) {
+                    result.classTag = options.classTag;
                 }
                 if ((options.methodCss) || (options.methodCss === '')) {
                     result.methodCss = options.methodCss;
                 }
+                if ((options.methodTag) || (options.methodTag === '')) {
+                    result.methodTag = options.methodTag;
+                }
                 if ((options.stringCss) || (options.stringCss === '')) {
                     result.stringCss = options.stringCss;
+                }
+                if ((options.stringTag) || (options.stringTag === '')) {
+                    result.stringTag = options.stringTag;
                 }
                 if ((options.stringEscCss) || (options.stringEscCss === '')) {
                     result.stringEscCss = options.stringEscCss;
                 }
+                if ((options.stringEscTag) || (options.stringEscTag === '')) {
+                    result.stringEscTag = options.stringEscTag;
+                }
                 if ((options.commentCss) || (options.commentCss === '')) {
                     result.commentCss = options.commentCss;
+                }
+                if ((options.commentTag) || (options.commentTag === '')) {
+                    result.commentTag = options.commentTag;
                 }
                 if ((options.normalCss) || (options.normalCss === '')) {
                     result.normalCss = options.normalCss;
                 }
+                if ((options.normalTag) || (options.normalTag === '')) {
+                    result.normalTag = options.normalTag;
+                }
                 if ((options.specialCharCss) || (options.specialCharCss === '')) {
                     result.specialCharCss = options.specialCharCss;
                 }
+                if ((options.specialCharTag) || (options.specialCharTag === '')) {
+                    result.specialCharTag = options.specialCharTag;
+                }
                 if ((options.lineCss) || (options.lineCss === '')) {
                     result.lineCss = options.lineCss;
+                }
+                if ((options.lineTag) || (options.lineTag === '')) {
+                    result.lineTag = options.lineTag;
+                }
+                if ((options.indentCss) || (options.indentCss === '')) {
+                    result.indentCss = options.indentCss;
+                }
+                if ((options.indentTag) || (options.indentTag === '')) {
+                    result.indentTag = options.indentTag;
                 }
 
                 if (options.initialIndent) {
@@ -290,10 +343,6 @@ if (!window.Code2Html) {
 
                 if ((options.disableCodeTag === true) || (options.disableCodeTag === false)) {
                     result.disableCodeTag = options.disableCodeTag;
-                }
-
-                if (options.elementTag) {
-                    result.elementTag = options.elementTag;
                 }
                 return result;
             }
@@ -393,16 +442,26 @@ if (!window.Code2Html) {
                 return result;
             }
 
-            function _getOpeningTag(cssClass) {
-                return '<' + _options.elementTag + ' class="' + cssClass + '">';
+            function _getOpeningTag(tag, cssClass) {
+                if (!tag) {
+                    tag = _options.defaultTag;
+                }
+
+                if (cssClass)
+                    return '<' + tag + ' class="' + cssClass + '">';
+                else
+                    return '<' + tag + '>';
             }
 
-            function _getClosingTag() {
-                return '</' + _options.elementTag + '>';
+            function _getClosingTag(tag) {
+                if (!tag) {
+                    tag = _options.defaultTag;
+                }
+                return '</' + tag + '>';
             }
 
-            function _getContentTag(cssClass, content) {
-                return _getOpeningTag(cssClass) + content + _getClosingTag();
+            function _getContentTag(tag, cssClass, content) {
+                return _getOpeningTag(tag, cssClass) + content + _getClosingTag(tag);
             }
 
             function _escapeChar(ch) {
@@ -419,26 +478,26 @@ if (!window.Code2Html) {
                 if (!lexeme)
                     return '';
 
-                const lexemeCss = _getLexemeCss(lexeme, prevLexeme, prevCh, nextCh);
-                return _getContentTag(lexemeCss, lexeme);
+                const lexemeTagAndCss = _getLexemeTagAndCss(lexeme, prevLexeme, prevCh, nextCh);
+                return _getContentTag(lexemeTagAndCss.tag, lexemeTagAndCss.css, lexeme);
             }
 
-            function _getLexemeCss(lexeme, prevLexeme, prevCh, nextCh) {
+            function _getLexemeTagAndCss(lexeme, prevLexeme, prevCh, nextCh) {
                 if (_lang.declarations.indexOf(lexeme) >= 0)
-                    return _options.declarationCss;
+                    return { tag: _options.declarationTag, css: _options.declarationCss };
                 if (_lang.statements.indexOf(lexeme) >= 0)
-                    return _options.statementCss;
+                    return { tag: _options.statementTag, css: _options.statementCss };
                 if (_lang.knownClasses.indexOf(lexeme) >= 0)
-                    return _options.classCss;
+                    return { tag: _options.classTag, css: _options.classCss };
                 if (_lang.classPrecedings.indexOf(prevLexeme) >= 0)
-                    return _options.classCss;
+                    return { tag: _options.classTag, css: _options.classCss };
                 if ((prevCh == _lang.inheritanceChar) && (_lang.declarations.indexOf(prevLexeme) < 0) && (_lang.statements.indexOf(prevLexeme) < 0) && (_lang.classPrecedings.indexOf(prevLexeme) < 0))
-                    return _options.classCss;
+                    return { tag: _options.classTag, css: _options.classCss };
 
                 if ((nextCh === _lang.callOpeningBrace) && (lexeme !== ''))
-                    return _options.methodCss;
+                    return { tag: _options.methodTag, css: _options.methodCss };
 
-                return _options.normalCss;
+                return { tag: _options.normalTag, css: _options.normalCss };
             };
 
             function _getNextNonSpace(str, from) {
@@ -464,22 +523,37 @@ if (!window.Code2Html) {
 function Code2HtmlSample() {
     const options = {
         codeCss: '',
-        tagCss: '',
-        tagBraceCss: '',
+        defaultTag: '',
+
         declarationCss: '',
+        declarationTag: '',
         statementCss: '',
+        statementTag: '',
         classCss: '',
+        classTag: '',
         methodCss: '',
+        methodTag: '',
         stringCss: '',
+        stringTag: '',
         stringEscCss: '',
+        stringEscTag: '',
         commentCss: '',
+        commentTag: '',
         normalCss: '',
+        normalTag: '',
         specialCharCss: '',
+        specialCharTag: '',
         lineCss: '',
+        lineTag: '',
+        indentCss: '',
+        indentTag: '',
 
         initialIndent: 0,
         inputIndentSize: 0,
-        outputIndentSize: 0
+        outputIndentSize: 0,
+
+        disableCodeTag: false,
+        knownClasses: []
     };
 
     const code = 'if (myVar == 1) return true; else return false;';
