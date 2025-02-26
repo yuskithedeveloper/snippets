@@ -1,5 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<!--Based on https://equal-earth.com/ SVG map-->
+<!-- Based on https://equal-earth.com/ SVG map -->
+<!-- Changed: continents and coutries are represented by polygons (instead of somewhat chaotical polylines), some comments added -->
+<!-- Usage is free. No responsibility from my part. The map is not 100% precise -->
+<!-- If you found this SVG map useful, please consider making a donation: https://buymeacoffee.com/yuskianywhere -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 550">
 	<defs>
 		<style>
