@@ -1,4 +1,9 @@
-﻿using System.Drawing;
+﻿// Coordinates convertor for Equal Earth SVG maps.
+// Scaling is based on https://equal-earth.com/ SVG maps size.
+// Usage is free. No responsibility from my part. -->
+// If you found this SVG map useful, please consider making a donation: https://buymeacoffee.com/yuskianywhere -->
+
+using System.Drawing;
 
 namespace YuskiTheDeveloper.EqualEarthMap
 {
